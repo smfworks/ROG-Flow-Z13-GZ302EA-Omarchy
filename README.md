@@ -1,3 +1,7 @@
+<img src="images/hero.jpg" alt="A detachable ASUS ROG Flow Z13 tablet-laptop on a rainy neon rooftop, cyan and magenta city lights reflecting in the wet surface" width="100%">
+
+*Hero image generated with Grok Imagine.*
+
 # Omarchy Linux on the ASUS ROG Flow Z13 (GZ302EA)
 
 This is a plain-language guide to setting up [Omarchy Linux](https://omarchy.org/) on the 2025 ASUS ROG Flow Z13, model **GZ302EA** — the one with the AMD Ryzen AI MAX+ 395 processor and Radeon 8060S graphics.
