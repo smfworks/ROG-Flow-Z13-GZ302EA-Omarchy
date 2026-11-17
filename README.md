@@ -8,7 +8,43 @@ This is a plain-language guide to setting up [Omarchy Linux](https://omarchy.org
 
 It is based on a working install that was checked on 15 November 2026. The original setup notes were written by Grok Build. SMF Works turned those notes into this guide.
 
-If you are an AI coding agent applying this setup on a fresh install, start with [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) instead. That file is written for a careful, step-by-step implementation, including checks and rollback notes.
+If you are an AI coding agent applying this setup on a fresh install, start with [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) instead. That file is written for a careful, step-by-step implementation, including checks and rollback notes. Rules for later work on the same machine are in [AGENTS.md](AGENTS.md).
+
+The later notes (battery limit, model memory, root maintenance, and localrouter) were checked on 17 November 2026, on Omarchy 4.5, kernel 7.2.x, and ROCm 7.2.x.
+
+## Contents
+
+Install:
+
+- [Who this is for](#who-this-is-for)
+- [What you need](#what-you-need)
+- [The machine this was checked on](#the-machine-this-was-checked-on)
+- [1. Install Omarchy](#1-install-omarchy)
+- [2. Keyboard at boot, and the detachable touchpad](#2-keyboard-at-boot-and-the-detachable-touchpad)
+- [3. Leave the BIOS GPU reservation at 4 GB](#3-leave-the-bios-gpu-reservation-at-4-gb)
+- [4. Give the GPU 96 GiB for a local model](#4-give-the-gpu-96-gib-for-a-local-model)
+- [5. Install ROCm](#5-install-rocm)
+- [6. Optional software installed on the reference machine](#6-optional-software-installed-on-the-reference-machine)
+- [7. A quick check that everything looks right](#7-a-quick-check-that-everything-looks-right)
+- [8. Local models and upkeep](#8-local-models-and-upkeep)
+- [Troubleshooting](#troubleshooting)
+
+Local models and upkeep, in full:
+
+- [Battery charge limit](docs/battery-charge-limit.md)
+- [init_user_pages kernel warnings](docs/init-user-pages.md)
+- [Measure a model's resident memory](docs/measure-model-memory.md)
+- [Pin model weights](docs/pin-model-weights.md)
+- [The uv cache](docs/uv-cache.md)
+- [Root maintenance](docs/root-maintenance.md) and [scripts/sudo-maint.sh](scripts/sudo-maint.sh)
+- [localrouter on Strix Halo](docs/localrouter.md)
+
+For agents, credit, and the license:
+
+- [AGENTS.md](AGENTS.md) — rules for an AI coding agent on this machine
+- [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) — first-install sequence, with checks and rollback
+- [Attribution](ATTRIBUTION.md)
+- [License](LICENSE)
 
 ## Who this is for
 
@@ -294,6 +330,18 @@ Expected shape of the results, on a machine like the reference one:
 - GTT at 96.0 GiB if you applied section 4
 - ROCm reporting `gfx1151` (7.2.4 on the reference machine)
 
+## 8. Local models and upkeep
+
+These are the pieces that showed up once the machine was already booting and ROCm could see the GPU. Each one has its own page. The short version:
+
+- **Battery.** `asusctl battery limit 80` caps the charge and saves it in `/etc/asusd/asusd.ron`. Confirm with `cat /sys/class/power_supply/BAT*/charge_control_end_threshold`. Details: [battery charge limit](docs/battery-charge-limit.md).
+- **A noisy kernel log while ComfyUI loads a GGUF.** About 12,000 `init_user_pages` lines, done in under a second, and harmless. ComfyUI 0.45 and later already handles pinned memory on this GPU. Details: [init_user_pages](docs/init-user-pages.md).
+- **How much memory to book.** Sample `mem_info_gtt_used` during a long prompt at the real context, then book the peak plus about 1.5 GiB. Qwen3.8-Flash-Next Q4 at 64K with one session peaked at 85.55 GiB and was booked at 87 GiB. Details: [measure resident memory](docs/measure-model-memory.md).
+- **Weights that survive a cache cleanup.** Reflink a copy on btrfs, record sha256 against the Hugging Face API in `pin.json`, and point the tool at that folder. Details: [pin model weights](docs/pin-model-weights.md).
+- **uv.** `uv cache prune` is the safe cleanup. `uv cache clean` drops the whole cache. Details: [the uv cache](docs/uv-cache.md).
+- **Root upkeep.** Home snapper snapshots, core-dump caps, `paccache`, a monthly btrfs scrub, and key-only SSH, in one idempotent script with a dry run. Details: [root maintenance](docs/root-maintenance.md).
+- **The router.** localrouter on this GPU, including the memory ceiling, what the scheduler will unload, and how to swap a build with a rollback kit. Details: [localrouter on Strix Halo](docs/localrouter.md).
+
 ## Troubleshooting
 
 **The disk-password prompt ignores the folio keyboard.** Attach the folio, then power on. If a kernel update broke this, boot from a snapshot or a USB keyboard and run `sudo limine-update`, then reboot. Confirm that `/etc/mkinitcpio.conf.d/00-omarchy-hooks.conf` still has `keyboard` and `keymap` before `encrypt`, and that `/etc/vconsole.conf` still has `KEYMAP=us` (or another Latin layout that can type your passphrase).
@@ -309,6 +357,12 @@ Expected shape of the results, on a machine like the reference one:
 **A local model runs slowly, or it seems to ignore the 96 GiB window.** Use a Vulkan build of llama.cpp, offload every layer with `-ngl 99`, and make sure you are not on a CPU-only build. Do not treat zram as extra model memory.
 
 **You are tempted to set BIOS GPU memory to 96 GB.** Don't, at least not for the reasons in this guide. That reservation would hide a huge amount of memory from Linux. Section 4 raises the shared window instead, and only uses the memory when a model allocates it.
+
+**ComfyUI prints thousands of `init_user_pages` lines while a GGUF loads.** That burst is the pattern in [init_user_pages](docs/init-user-pages.md). It finishes in under a second. Leave the kernel command line as it is.
+
+**The battery still charges to full.** Run `asusctl battery limit 80` and read `charge_control_end_threshold`, as in [battery charge limit](docs/battery-charge-limit.md).
+
+**localrouter answers 503 with `insufficient_memory`.** The request does not fit beside what is already resident. Read [localrouter on Strix Halo](docs/localrouter.md) before you unload a model or restart the service.
 
 ## Credit and license
 
