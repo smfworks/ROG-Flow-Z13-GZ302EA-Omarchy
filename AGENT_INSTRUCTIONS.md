@@ -2,6 +2,8 @@
 
 These instructions are for an AI coding agent applying the same setup on a fresh Omarchy Linux install of this exact model. Humans should start with [README.md](README.md).
 
+Rules for later work on this machine (what to leave alone, when a service may be restarted, where each procedure lives) are in [AGENTS.md](AGENTS.md). The steps below are the first install. The battery limit, model-memory measurement, root maintenance, and localrouter notes are separate procedures. Do them when the user asks, and follow AGENTS.md plus the page it names.
+
 Follow the steps in order. Do not invent steps that are not written here. Do not apply BIOS, kernel-parameter, or udev changes on a different product.
 
 ## Rules
@@ -21,9 +23,14 @@ Follow the steps in order. Do not invent steps that are not written here. Do not
 2. Writing or changing kernel command-line parameters, Limine entry drop-ins, or anything under `/etc/limine-entry-tool.d/` (step 4).
 3. Running `limine-update` except as specified after a file this document told you to write, or as a recovery action the user has approved for a dead keyboard at the passphrase prompt.
 4. Changing `/etc/mkinitcpio.conf` or any file under `/etc/mkinitcpio.conf.d/`.
-5. Changing partitions, LUKS, btrfs subvolumes, or reinstalling the bootloader.
+5. Changing partitions, LUKS, btrfs subvolumes, or reinstalling the bootloader. The home snapper config created by [scripts/sudo-maint.sh](scripts/sudo-maint.sh) is the exception, and only when the user asked for that script. It does not repartition the disk.
 6. Installing or enabling optional software in step 6, unless the user already asked for it.
 7. Applying the 96 GiB (or 104 GiB) GTT ceiling when visible RAM is not about 121 GiB.
+8. Rebooting, except when the user has agreed to a reboot this document already requires (the touchpad rule, the dead-keyboard recovery, or step 4 after `limine-update`).
+9. Running [scripts/sudo-maint.sh](scripts/sudo-maint.sh) without a `--dry-run` first, or without the user having asked for that upkeep.
+10. `uv cache clean`. `uv cache prune` is the safe cleanup. See [docs/uv-cache.md](docs/uv-cache.md).
+11. Restarting localrouter, or unloading a tool, while `/v1/status` shows anything `loading`, `committing`, or `busy`. See [docs/localrouter.md](docs/localrouter.md).
+12. Booking a model size you have not measured at the real context and session settings. See [docs/measure-model-memory.md](docs/measure-model-memory.md).
 
 If a preflight or verification check fails in a way this document does not give a fix for, stop and ask. Do not improvise around boot, firmware, or storage.
 
@@ -376,3 +383,17 @@ Recorded on a working GZ302EA so you can compare, not so you must match every ve
 - Boot: Limine, LUKS, btrfs (2 GB EFI on `/boot`, one LUKS volume, btrfs mounted at `/`, `/home`, `/var/log`, `/var/cache/pacman/pkg`)
 - `asusctl` 6.5.0
 - ROCm 7.2.4 (`rocm-smi-lib` 7.2.0-2 on the reference machine)
+
+## Further procedures
+
+Checked again on 17 November 2026 (Omarchy 4.5, kernel 7.2.x, ROCm 7.2.x). These are not part of the first install. When the user asks for one, follow [AGENTS.md](AGENTS.md) and the page:
+
+| Task | Page |
+|---|---|
+| Battery charge limit | [docs/battery-charge-limit.md](docs/battery-charge-limit.md) |
+| `init_user_pages` lines during a GGUF load | [docs/init-user-pages.md](docs/init-user-pages.md) |
+| Measure memory before booking it | [docs/measure-model-memory.md](docs/measure-model-memory.md) |
+| Pin model weights | [docs/pin-model-weights.md](docs/pin-model-weights.md) |
+| uv cache | [docs/uv-cache.md](docs/uv-cache.md) |
+| Root maintenance | [docs/root-maintenance.md](docs/root-maintenance.md) |
+| localrouter on this GPU | [docs/localrouter.md](docs/localrouter.md) |
